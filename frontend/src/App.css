@@ -1,0 +1,101 @@
+/* Discord + Framer Fusion Styles */
+
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Custom animations for Framer-style effects */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(88, 101, 242, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(88, 101, 242, 0.6);
+  }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Discord-inspired scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2b2d31;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #5865F2;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4752C4;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Discord font styling */
+body {
+  font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #1e1f22;
+  color: #ffffff;
+}
+
+/* Framer-style hover effects */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px) scale(1.02);
+}
+
+/* Discord button styles */
+.discord-button {
+  background: #5865F2;
+  transition: all 0.2s ease;
+}
+
+.discord-button:hover {
+  background: #4752C4;
+  transform: translateY(-2px);
+}
+
+/* Glowing text effect */
+.text-glow {
+  text-shadow: 0 0 20px rgba(88, 101, 242, 0.5);
+}
+
+/* Card glass effect */
+.glass-card {
+  background: rgba(43, 45, 49, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(88, 101, 242, 0.3);
+}
+
+/* Floating animation */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Purple gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #5865F2, #7289DA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
