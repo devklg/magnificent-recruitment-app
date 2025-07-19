@@ -52,6 +52,7 @@ const schedulingRoutes = require('./routes/scheduling');
 const commissionRoutes = require('./routes/commissions');
 const powerlineRoutes = require('./routes/powerline');
 const adminRoutes = require('./routes/admin');
+const memoryRoutes = require('./routes/memory'); // NEW: MEM0-enhanced memory routes
 
 // JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -85,6 +86,7 @@ app.use('/api/scheduling', schedulingRoutes);
 app.use('/api/commissions', commissionRoutes);
 app.use('/api/powerline', powerlineRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/memory', memoryRoutes); // NEW: MEM0-enhanced memory system
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -98,7 +100,8 @@ app.get('/api/health', (req, res) => {
       'PowerLine queue management',
       'Admin CRUD operations',
       'Real-time updates',
-      'Printing capabilities'
+      'Printing capabilities',
+      'MEM0-enhanced memory system' // NEW
     ],
     timestamp: new Date().toISOString()
   });
@@ -332,8 +335,9 @@ process.on('SIGTERM', () => {
 server.listen(PORT, () => {
   console.log(`\\n🚀 MAGNIFICENT RECRUITMENT API - POWERLINE EDITION`);
   console.log(`⚡ Server running on port ${PORT}`);
-  console.log(`🎯 Features: 3-way calls • Commission tracking • PowerLine queue • Admin CRUD`);
+  console.log(`🎯 Features: 3-way calls • Commission tracking • PowerLine queue • Admin CRUD • MEM0 Memory`);
   console.log(`💻 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🧠 Memory system: http://localhost:${PORT}/api/memory/health`);
   console.log(`🔗 WebSocket support enabled for real-time updates\\n`);
 });
 
