@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { User, Team } = require('../models');
+const ScheduledCall = require('../models/ScheduledCall');
 const { authenticateToken } = require('../middleware/auth');
 
 // 3-Way Call Scheduling System
