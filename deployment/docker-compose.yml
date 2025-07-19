@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # Frontend Service
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://backend:3001
+    depends_on:
+      - backend
+    networks:
+      - recruitment-network
+
+  # Backend Service
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/recruitment-app
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3001
+    depends_on:
+      - mongodb
+    networks:
+      - recruitment-network
+
+  # MongoDB Service
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_DATABASE=recruitment-app
+    volumes:
+      - mongodb-data:/data/db
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - recruitment-network
+
+  # Redis for Session Management
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - recruitment-network
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - recruitment-network
+
+volumes:
+  mongodb-data:
+  redis-data:
+
+networks:
+  recruitment-network:
+    driver: bridge
+
+# Environment variables needed:
+# JWT_SECRET=your-super-secure-jwt-secret-here
+# MONGO_USERNAME=recruitment-admin
+# MONGO_PASSWORD=secure-password-here
