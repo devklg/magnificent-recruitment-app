@@ -3,12 +3,22 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config();
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    methods: ["GET", "POST"]
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
-// Discord-inspired middleware
+// CORS and middleware setup
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
@@ -25,177 +35,23 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/magnifice
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, '🔴 MongoDB connection error:'));
 db.once('open', () => {
-  console.log('🎮 Connected to MongoDB - Discord style!');
+  console.log('🎮 Connected to MongoDB - PowerLine ready!');
 });
 
-// User Schema - Discord inspired
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    minlength: 2,
-    maxlength: 32
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
-  },
-  avatar: {
-    type: String,
-    default: null
-  },
-  role: {
-    type: String,
-    enum: ['member', 'recruiter', 'admin'],
-    default: 'member'
-  },
-  team: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Team',
-    default: null
-  },
-  stats: {
-    recruits: { type: Number, default: 0 },
-    points: { type: Number, default: 0 },
-    level: { type: Number, default: 1 }
-  },
-  isOnline: {
-    type: Boolean,
-    default: false
-  },
-  lastSeen: {
-    type: Date,
-    default: Date.now
-  },
-  joinedAt: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
+// Import Models
+const { User, Team, Activity } = require('./models');
+const Commission = require('./models/Commission');
+const PowerLinePosition = require('./models/PowerLinePosition');
+const ScheduledCall = require('./models/ScheduledCall');
 
-// Team Schema - Discord Guild inspired
-const teamSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
-  },
-  description: {
-    type: String,
-    maxlength: 500
-  },
-  avatar: {
-    type: String,
-    default: null
-  },
-  owner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  members: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    role: {
-      type: String,
-      enum: ['member', 'moderator', 'admin'],
-      default: 'member'
-    },
-    joinedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  channels: [{
-    name: String,
-    type: {
-      type: String,
-      enum: ['text', 'voice', 'announcement'],
-      default: 'text'
-    },
-    description: String,
-    isPrivate: {
-      type: Boolean,
-      default: false
-    }
-  }],
-  stats: {
-    totalMembers: { type: Number, default: 0 },
-    activeMembers: { type: Number, default: 0 },
-    totalRecruits: { type: Number, default: 0 }
-  },
-  settings: {
-    isPublic: {
-      type: Boolean,
-      default: true
-    },
-    allowInvites: {
-      type: Boolean,
-      default: true
-    },
-    verificationLevel: {
-      type: String,
-      enum: ['none', 'low', 'medium', 'high'],
-      default: 'low'
-    }
-  }
-}, {
-  timestamps: true
-});
-
-// Recruitment Activity Schema
-const activitySchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['recruit', 'promotion', 'achievement', 'team_join', 'level_up'],
-    required: true
-  },
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  target: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  team: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Team'
-  },
-  message: {
-    type: String,
-    required: true
-  },
-  points: {
-    type: Number,
-    default: 0
-  },
-  metadata: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  }
-}, {
-  timestamps: true
-});
-
-const User = mongoose.model('User', userSchema);
-const Team = mongoose.model('Team', teamSchema);
-const Activity = mongoose.model('Activity', activitySchema);
+// Import Routes
+const authRoutes = require('./routes/auth');
+const userRoutes = require('./routes/users');
+const teamRoutes = require('./routes/teams');
+const schedulingRoutes = require('./routes/scheduling');
+const commissionRoutes = require('./routes/commissions');
+const powerlineRoutes = require('./routes/powerline');
+const adminRoutes = require('./routes/admin');
 
 // JWT Authentication Middleware
 const authenticateToken = (req, res, next) => {
@@ -215,310 +71,243 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Discord-style Routes
+// Make authenticateToken available to routes
+app.locals.authenticateToken = authenticateToken;
 
-// Health check - Discord style
+// WebSocket Setup for Real-time Features
+require('./websocket/realtime')(io);
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/teams', teamRoutes);
+app.use('/api/scheduling', schedulingRoutes);
+app.use('/api/commissions', commissionRoutes);
+app.use('/api/powerline', powerlineRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'online',
-    message: '🎮 Magnificent Recruitment API is running!',
-    version: '1.0.0',
+    message: '🚀 Magnificent Recruitment API - PowerLine Ready!',
+    version: '2.0.0',
+    features: [
+      '3-way call scheduling',
+      'Manual commission tracking',
+      'PowerLine queue management',
+      'Admin CRUD operations',
+      'Real-time updates',
+      'Printing capabilities'
+    ],
     timestamp: new Date().toISOString()
   });
 });
 
-// User Registration - Discord style
-app.post('/api/auth/register', async (req, res) => {
+// PowerLine enrollment endpoint (public)
+app.post('/api/enroll', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { name, email, phone, sponsorCode } = req.body;
 
-    // Validation
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
-    // Check if user exists
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
-    });
-
-    if (existingUser) {
+    // Basic validation
+    if (!name || !email) {
       return res.status(400).json({ 
-        error: existingUser.email === email ? 'Email already registered' : 'Username already taken'
+        success: false, 
+        message: 'Name and email are required' 
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    // Check if email already enrolled
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      const existingPosition = await PowerLinePosition.findOne({ userId: existingUser._id });
+      if (existingPosition) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'This email is already enrolled in PowerLine',
+          position: existingPosition.position
+        });
+      }
+    }
 
-    // Create user
-    const user = new User({
-      username,
-      email,
-      password: hashedPassword,
-      avatar: `https://cdn.discordapp.com/embed/avatars/${Math.floor(Math.random() * 5)}.png`
+    // Find sponsor if code provided
+    let sponsor = null;
+    if (sponsorCode) {
+      sponsor = await User.findOne({ sponsorCode });
+    }
+
+    // Create user if doesn't exist
+    let user = existingUser;
+    if (!user) {
+      const tempPassword = Math.random().toString(36).slice(-8);
+      user = new User({
+        name,
+        email,
+        phone: phone || '',
+        password: await bcrypt.hash(tempPassword, 12),
+        role: 'prospect',
+        status: 'pending'
+      });
+      await user.save();
+    }
+
+    // Get next PowerLine position
+    const nextPosition = await PowerLinePosition.getNextPosition();
+
+    // Create PowerLine position
+    const powerlinePosition = new PowerLinePosition({
+      userId: user._id,
+      position: nextPosition,
+      displayName: name,
+      sponsorId: sponsor?._id || null,
+      sponsorName: sponsor?.name || null,
+      status: 'active',
+      source: 'public_enrollment',
+      contactInfo: {
+        email,
+        phone: phone || null
+      }
     });
 
+    await powerlinePosition.save();
+
+    // Update user with PowerLine info
+    user.powerLinePosition = nextPosition;
+    user.powerLineSponsor = sponsor?._id || null;
+    user.powerLineJoinDate = new Date();
     await user.save();
 
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id, username: user.username },
-      process.env.JWT_SECRET || 'magnificent-recruitment-secret',
-      { expiresIn: '7d' }
-    );
-
-    // Log activity
+    // Create welcome activity
     const activity = new Activity({
-      type: 'team_join',
+      type: 'powerline_join',
       user: user._id,
-      message: `${username} joined the Magnificent Recruitment Empire!`,
-      points: 100
-    });
-    await activity.save();
-
-    res.status(201).json({
-      message: 'Welcome to the Empire!',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-        stats: user.stats
-      }
-    });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error during registration' });
-  }
-});
-
-// User Login - Discord style
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    // Find user
-    const user = await User.findOne({ email }).populate('team');
-    
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    
-    if (!isValidPassword) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
-
-    // Update online status
-    user.isOnline = true;
-    user.lastSeen = new Date();
-    await user.save();
-
-    // Create JWT token
-    const token = jwt.sign(
-      { userId: user._id, username: user.username },
-      process.env.JWT_SECRET || 'magnificent-recruitment-secret',
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      message: 'Welcome back to the Empire!',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        role: user.role,
-        stats: user.stats,
-        team: user.team
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Server error during login' });
-  }
-});
-
-// Get User Profile
-app.get('/api/users/me', authenticateToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.userId)
-      .populate('team')
-      .select('-password');
-    
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json({ user });
-  } catch (error) {
-    console.error('Profile fetch error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Get Team Dashboard
-app.get('/api/teams/:teamId/dashboard', authenticateToken, async (req, res) => {
-  try {
-    const { teamId } = req.params;
-    
-    const team = await Team.findById(teamId)
-      .populate('members.user', 'username avatar stats isOnline')
-      .populate('owner', 'username avatar');
-    
-    if (!team) {
-      return res.status(404).json({ error: 'Team not found' });
-    }
-
-    // Get recent activities
-    const activities = await Activity.find({ team: teamId })
-      .populate('user', 'username avatar')
-      .sort({ createdAt: -1 })
-      .limit(20);
-
-    res.json({
-      team,
-      activities,
-      stats: {
-        totalMembers: team.members.length,
-        onlineMembers: team.members.filter(m => m.user.isOnline).length,
-        totalPoints: team.members.reduce((sum, m) => sum + m.user.stats.points, 0)
-      }
-    });
-  } catch (error) {
-    console.error('Dashboard error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Recruitment Tracking
-app.post('/api/recruitment/track', authenticateToken, async (req, res) => {
-  try {
-    const { targetEmail, message, type = 'recruit' } = req.body;
-    
-    const recruiter = await User.findById(req.user.userId);
-    
-    if (!recruiter) {
-      return res.status(404).json({ error: 'Recruiter not found' });
-    }
-
-    // Create activity
-    const activity = new Activity({
-      type,
-      user: recruiter._id,
-      team: recruiter.team,
-      message: message || `${recruiter.username} initiated recruitment contact`,
-      points: 50,
+      message: `${name} secured PowerLine position #${nextPosition}!`,
+      points: 0,
       metadata: {
-        targetEmail,
-        recruitmentType: type
+        position: nextPosition,
+        sponsor: sponsor?.name || null
       }
     });
-
     await activity.save();
 
-    // Update recruiter stats
-    recruiter.stats.points += 50;
-    recruiter.stats.recruits += 1;
-    
-    // Level up check (every 1000 points)
-    const newLevel = Math.floor(recruiter.stats.points / 1000) + 1;
-    if (newLevel > recruiter.stats.level) {
-      recruiter.stats.level = newLevel;
-      
-      // Level up activity
-      const levelUpActivity = new Activity({
-        type: 'level_up',
-        user: recruiter._id,
-        team: recruiter.team,
-        message: `${recruiter.username} reached level ${newLevel}!`,
-        points: 100
-      });
-      await levelUpActivity.save();
-    }
+    res.json({
+      success: true,
+      message: `Congratulations! Your PowerLine position #${nextPosition} has been secured!`,
+      position: {
+        number: nextPosition,
+        name: name,
+        sponsor: sponsor?.name || null,
+        joinedAt: powerlinePosition.joinedAt
+      },
+      nextSteps: [
+        sponsor ? `Contact your sponsor ${sponsor.name} to learn more` : 'A sponsor will contact you soon',
+        'Watch your position in the PowerLine queue',
+        'Share the opportunity with others'
+      ]
+    });
 
-    await recruiter.save();
+  } catch (error) {
+    console.error('Enrollment error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Enrollment failed. Please try again.' 
+    });
+  }
+});
+
+// Real-time PowerLine queue status (public)
+app.get('/api/queue-status', async (req, res) => {
+  try {
+    const totalPositions = await PowerLinePosition.countDocuments();
+    
+    // Get recent additions (last 24 hours)
+    const yesterday = new Date();
+    yesterday.setHours(yesterday.getHours() - 24);
+    const recentAdditions = await PowerLinePosition.countDocuments({
+      joinedAt: { $gte: yesterday }
+    });
+
+    // Get sample of recent positions for display
+    const recentPositions = await PowerLinePosition.find()
+      .sort({ position: -1 })
+      .limit(10)
+      .select('position displayName joinedAt');
 
     res.json({
-      message: 'Recruitment activity tracked!',
-      points: 50,
-      totalPoints: recruiter.stats.points,
-      level: recruiter.stats.level,
-      activity: activity
+      success: true,
+      stats: {
+        totalPositions,
+        recentAdditions,
+        recentPositions: recentPositions.map(pos => ({
+          position: pos.position,
+          name: pos.displayName,
+          timeAgo: getTimeAgo(pos.joinedAt)
+        }))
+      },
+      message: 'Live PowerLine queue status'
     });
+
   } catch (error) {
-    console.error('Tracking error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Queue status error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to fetch queue status' 
+    });
   }
 });
 
-// Get Leaderboard
-app.get('/api/leaderboard', async (req, res) => {
+// Commission feed for social proof (public)
+app.get('/api/commission-feed', async (req, res) => {
   try {
-    const { type = 'points', limit = 50 } = req.query;
+    const { limit = 20 } = req.query;
     
-    let sortField = 'stats.points';
-    if (type === 'recruits') sortField = 'stats.recruits';
-    if (type === 'level') sortField = 'stats.level';
+    const recentCommissions = await Commission.find({ 
+      verified: true,
+      showInFeed: true,
+      isPublic: true
+    })
+    .sort({ createdAt: -1 })
+    .limit(parseInt(limit))
+    .select('amount description userName createdAt commissionType');
 
-    const leaders = await User.find()
-      .select('username avatar stats role team')
-      .populate('team', 'name avatar')
-      .sort({ [sortField]: -1 })
-      .limit(parseInt(limit));
+    const feed = recentCommissions.map(comm => ({
+      amount: `$${comm.amount.toFixed(2)}`,
+      description: comm.description,
+      promoter: comm.userName,
+      timeAgo: getTimeAgo(comm.createdAt),
+      type: comm.commissionType
+    }));
 
     res.json({
-      leaderboard: leaders,
-      type,
-      timestamp: new Date().toISOString()
+      success: true,
+      feed,
+      message: 'Live commission activity'
     });
+
   } catch (error) {
-    console.error('Leaderboard error:', error);
-    res.status(500).json({ error: 'Server error' });
+    console.error('Commission feed error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Unable to fetch commission feed' 
+    });
   }
 });
 
-// Real-time Activity Feed
-app.get('/api/activities/feed', authenticateToken, async (req, res) => {
-  try {
-    const { limit = 50, type } = req.query;
-    
-    let query = {};
-    if (type) query.type = type;
-    
-    const activities = await Activity.find(query)
-      .populate('user', 'username avatar')
-      .populate('target', 'username avatar')
-      .populate('team', 'name avatar')
-      .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
+// Utility function
+function getTimeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+  return Math.floor(seconds / 86400) + 'd ago';
+}
 
-    res.json({ activities });
-  } catch (error) {
-    console.error('Feed error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Error handling middleware
+// Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('💥 Server Error:', err.stack);
   res.status(500).json({ 
-    error: 'Something went wrong!',
+    success: false,
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
@@ -526,17 +315,26 @@ app.use((err, req, res, next) => {
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({ 
-    error: 'Route not found',
-    message: '🎮 This endpoint doesn\'t exist in our Discord!'
+    success: false,
+    message: 'API endpoint not found'
+  });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
   });
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`\n🎮 MAGNIFICENT RECRUITMENT API`);
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`💜 Discord + Framer fusion backend`);
-  console.log(`🔗 Health: http://localhost:${PORT}/api/health\n`);
+server.listen(PORT, () => {
+  console.log(`\\n🚀 MAGNIFICENT RECRUITMENT API - POWERLINE EDITION`);
+  console.log(`⚡ Server running on port ${PORT}`);
+  console.log(`🎯 Features: 3-way calls • Commission tracking • PowerLine queue • Admin CRUD`);
+  console.log(`💻 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔗 WebSocket support enabled for real-time updates\\n`);
 });
 
-module.exports = app;
+module.exports = { app, server, io };
