@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Magnificent Recruitment App - CSS Variables */
+@layer base {
+  :root {
+    /* Scarlet Theme Variables */
+    --recruitment-primary: 348 83% 47%;        /* Scarlet red */
+    --recruitment-primary-foreground: 0 0% 98%;    /* Clean white */
+    --recruitment-secondary: 220 14% 96%;      /* Professional gray */
+    --recruitment-secondary-foreground: 220 9% 9%;  /* Dark text */
+    --recruitment-accent: 43 96% 49%;          /* Gold highlight */
+    --recruitment-accent-foreground: 43 5% 11%;     /* Dark accent text */
+    
+    /* ShadCN Base Variables */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: var(--recruitment-primary);
+    --primary-foreground: var(--recruitment-primary-foreground);
+    --secondary: var(--recruitment-secondary);
+    --secondary-foreground: var(--recruitment-secondary-foreground);
+    --muted: 210 40% 98%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: var(--recruitment-accent);
+    --accent-foreground: var(--recruitment-accent-foreground);
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: var(--recruitment-primary);
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: var(--recruitment-primary);
+    --primary-foreground: var(--recruitment-primary-foreground);
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: var(--recruitment-accent);
+    --accent-foreground: var(--recruitment-accent-foreground);
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: var(--recruitment-accent);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Magnificent Recruitment App Custom Styles */
+.recruitment-hero {
+  background: linear-gradient(135deg, 
+    hsl(var(--recruitment-primary)) 0%, 
+    hsl(var(--recruitment-accent)) 100%);
+  color: hsl(var(--recruitment-primary-foreground));
+}
+
+.recruitment-card {
+  @apply bg-card border border-border shadow-lg;
+}
+
+.recruitment-button-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
+}
+
+.recruitment-fade-in {
+  @apply animate-fade-in;
+}
+
+.recruitment-slide-up {
+  @apply animate-slide-up;
+}
+
+/* Professional animations */
+@keyframes pulse-scarlet {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 hsl(var(--recruitment-primary) / 0.4); 
+  }
+  50% { 
+    box-shadow: 0 0 0 8px hsl(var(--recruitment-primary) / 0); 
+  }
+}
+
+.recruitment-pulse {
+  animation: pulse-scarlet 2s infinite;
+}
+
+/* Accessibility enhancements */
+.recruitment-focus:focus {
+  @apply outline-2 outline-accent outline-offset-2;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 0%;
+    --recruitment-primary: 0 100% 50%;
+  }
+}
