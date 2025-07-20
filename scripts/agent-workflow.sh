@@ -25,7 +25,7 @@ echo "📝 Commit Message: $COMMIT_MESSAGE"
 echo "🌿 Feature Branch: $FEATURE_BRANCH"
 
 # Ensure we're in the worktree for this agent
-WORKTREE_PATH="../worktrees/${AGENT_NAME}"
+WORKTREE_PATH="./worktrees/${AGENT_NAME}"
 if [ ! -d "$WORKTREE_PATH" ]; then
     echo "❌ Worktree not found: $WORKTREE_PATH"
     echo "🔧 Run: git worktree add $WORKTREE_PATH $AGENT_NAME"
