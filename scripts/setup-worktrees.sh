@@ -17,7 +17,7 @@ AGENTS=(
     "elena-database"
 )
 
-WORKTREE_BASE="../worktrees"
+WORKTREE_BASE="./worktrees"
 
 echo "🚀 Setting up Agent Worktrees for Magnificent Recruitment App"
 echo "📁 Base directory: $WORKTREE_BASE"
